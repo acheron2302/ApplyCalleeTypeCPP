@@ -1,0 +1,120 @@
+# cmkr configuration for ApplyCalleeTypeEx - IDA Pro Plugin using idax
+# 
+# Build Instructions:
+#   1. Set IDASDK environment variable to your IDA SDK root
+#   2. Generate build files: cmake -B build
+#   3. Build the plugin: cmake --build build
+
+[cmake]
+version = "3.27"
+cmkr-include = "cmkr.cmake"
+
+[conditions]  
+qt6 = "Qt6_FOUND"
+
+[project]
+name = "ApplyCalleeTypeEx"
+version = "1.0.0"
+description = "Apply callee type to indirect call location"
+languages = ["CXX"]
+# Use dynamic runtime
+msvc-runtime = "dynamic"
+# Set up IDASDK path BEFORE project() - environment setup only
+cmake-before = """
+# Verify IDASDK environment variable
+if(NOT DEFINED ENV{IDASDK})
+    message(FATAL_ERROR "IDASDK environment variable is not set!")
+endif()
+
+set(IDASDK_PATH "$ENV{IDASDK}")
+file(TO_CMAKE_PATH "${IDASDK_PATH}" IDASDK_CMAKE_PATH)
+message(STATUS "Original IDASDK: ${IDASDK_CMAKE_PATH}")
+
+# Handle GitHub SDK structure (ida-cmake might be at parent level, SDK in src/)
+if(NOT EXISTS "${IDASDK_CMAKE_PATH}/ida-cmake/bootstrap.cmake")
+    get_filename_component(IDASDK_PARENT "${IDASDK_CMAKE_PATH}" DIRECTORY)
+    message(STATUS "Looking for ida-cmake in parent: ${IDASDK_PARENT}")
+    if(EXISTS "${IDASDK_PARENT}/ida-cmake/bootstrap.cmake")
+        set(IDASDK_CMAKE_PATH "${IDASDK_PARENT}")
+        message(STATUS "Found ida-cmake in parent, using: ${IDASDK_CMAKE_PATH}")
+    endif()
+endif()
+
+if(NOT EXISTS "${IDASDK_CMAKE_PATH}/ida-cmake/bootstrap.cmake")
+    message(FATAL_ERROR "ida-cmake not found at IDASDK='${IDASDK_PATH}' or '${IDASDK_CMAKE_PATH}'")
+endif()
+
+# For GitHub SDK structure, the actual SDK is in src/
+if(EXISTS "${IDASDK_CMAKE_PATH}/src/include/pro.h")
+    set(IDASDK_ACTUAL_PATH "${IDASDK_CMAKE_PATH}/src")
+    message(STATUS "Detected GitHub SDK structure, using src/ subdirectory")
+else()
+    set(IDASDK_ACTUAL_PATH "${IDASDK_CMAKE_PATH}")
+endif()
+
+# Update the environment variable for ida-cmake
+set(ENV{IDASDK} "${IDASDK_ACTUAL_PATH}")
+message(STATUS "Set ENV{IDASDK} to: $ENV{IDASDK}")
+
+# Set idasdk_DIR for find_package
+set(idasdk_DIR "${IDASDK_CMAKE_PATH}/ida-cmake")
+message(STATUS "Set idasdk_DIR to: ${idasdk_DIR}")
+
+# Find IDA's Qt6 cmake config
+if(EXISTS "E:/tools/qt-build/linux/qt-yusa.tar/qt-yusa/x64win/lib/cmake/Qt6")
+    set(Qt6_DIR "E:/tools/qt-build/linux/qt-yusa.tar/qt-yusa/x64win/lib/cmake/Qt6" CACHE PATH "Qt6 CMake directory" FORCE)
+    message(STATUS "Found IDA Qt6 at: ${Qt6_DIR}")
+endif()
+"""
+
+[fetch-content.idax]
+git = "https://github.com/acheron2302/idax.git"
+subdir = "AVOID_calling_ADD_SUBDIR_in_subseqeuent_MAKEAVILABLE"
+
+[fetch-content.fmt]
+git = "https://github.com/fmtlib/fmt"  
+tag = "e69e5f977d458f2650bb346dadf2ad30c5320281" 
+
+# Plugin target - standard CMake shared library
+[target.ApplyCalleeTypeEx]
+cmake-before= """
+# Include idasdk (platform is now detected properly)
+find_package(idasdk REQUIRED)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
+
+# Enable AUTOMOC for Qt moc generation
+set(CMAKE_AUTOMOC ON)
+
+# Create idax target
+set(IDAX_SRC_DIR "${CMAKE_BINARY_DIR}/_deps/idax-src")
+file(GLOB_RECURSE IDAX_SOURCES CONFIGURE_DEPENDS "${IDAX_SRC_DIR}/src/*.cpp")
+add_library(idax STATIC ${IDAX_SOURCES})
+add_library(idax::idax ALIAS idax)
+
+target_include_directories(idax
+    PUBLIC
+        ${IDAX_SRC_DIR}/include
+    PRIVATE
+        ${IDAX_SRC_DIR}/src
+)
+
+target_link_libraries(idax PUBLIC idasdk::plugin)
+target_compile_features(idax PUBLIC cxx_std_23)
+target_compile_definitions(idax PRIVATE FMT_HEADER_ONLY)
+"""
+
+type = "shared"
+sources = ["src/main.cpp", "src/preprocessing.cpp", "src/qt_dialogs.cpp"]
+compile-features = ["cxx_std_23"]
+# Use fmt header-only, Qt6::Widgets for moc
+link-libraries = ["idasdk::plugin", "idax", "Qt6::Core", "Qt6::Gui", "Qt6::Widgets"]
+include-directories = ["${CMAKE_BINARY_DIR}/_deps/fmt-src/include"]
+compile-definitions = ["FMT_HEADER_ONLY"]
+
+# Windows: SUBSYSTEM:WINDOWS
+windows.link-options = ["/SUBSYSTEM:WINDOWS"]
+
+[target.ApplyCalleeTypeEx.properties]
+CXX_STANDARD_REQUIRED = true
+RUNTIME_OUTPUT_DIRECTORY = "${IDABIN}/plugins"
+LIBRARY_OUTPUT_DIRECTORY = "${IDABIN}/plugins"
