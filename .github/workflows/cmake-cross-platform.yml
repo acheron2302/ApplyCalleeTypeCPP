@@ -1,0 +1,107 @@
+name: Build ApplyCalleeTypeEx Plugin
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: ${{ matrix.artifact_name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            c_compiler: cl
+            cpp_compiler: cl
+            build_type: Release
+            artifact_name: ApplyCalleeTypeEx-windows-msvc
+            qt_arch: win64_msvc2022_64
+            plugin_glob: "*.dll"
+          - os: ubuntu-latest
+            c_compiler: gcc
+            cpp_compiler: g++
+            build_type: Release
+            artifact_name: ApplyCalleeTypeEx-linux-gcc
+            qt_arch: gcc_64
+            plugin_glob: "*.so"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Checkout IDA SDK
+        uses: actions/checkout@v4
+        with:
+          repository: HexRaysSA/ida-sdk
+          path: idasdk
+
+      - name: Install ida-cmake
+        shell: bash
+        run: |
+          git clone --depth 1 https://github.com/allthingsida/ida-cmake.git idasdk/ida-cmake
+          test -f idasdk/ida-cmake/bootstrap.cmake
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.3'
+          target: desktop
+          arch: ${{ matrix.qt_arch }}
+          cache: true
+
+      - name: Setup MSVC developer environment
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Setup build environment
+        shell: bash
+        run: |
+          echo "IDASDK=${{ github.workspace }}/idasdk" >> "$GITHUB_ENV"
+          echo "IDABIN=${{ github.workspace }}/build/output" >> "$GITHUB_ENV"
+          mkdir -p "${{ github.workspace }}/build/output/plugins"
+
+      - name: Generate CMake from cmkr
+        shell: bash
+        run: cmake -P cmkr.cmake
+
+      - name: Configure CMake
+        shell: bash
+        run: |
+          cmake -B build -S . \
+            -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} \
+            -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DCMAKE_CXX_STANDARD=23 \
+            -DCMAKE_CXX_STANDARD_REQUIRED=ON \
+            -DCMAKE_PREFIX_PATH="${QT_ROOT_DIR}"
+
+      - name: Build plugin
+        run: cmake --build build --config ${{ matrix.build_type }} --parallel
+
+      - name: Verify build output
+        shell: bash
+        run: |
+          test -d "${IDABIN}/plugins"
+          find "${IDABIN}/plugins" -type f \( -name "*.dll" -o -name "*.so" -o -name "*.dylib" \) -print
+          test -n "$(find "${IDABIN}/plugins" -type f -name '${{ matrix.plugin_glob }}' -print -quit)"
+
+      - name: Prepare artifacts
+        shell: bash
+        run: |
+          mkdir -p artifacts
+          find "${IDABIN}/plugins" -type f -name '${{ matrix.plugin_glob }}' -exec cp {} artifacts/ \;
+          ls -la artifacts
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: artifacts/*
+          if-no-files-found: error
