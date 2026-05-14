@@ -47,7 +47,7 @@ jobs:
           test -f idasdk/ida-cmake/bootstrap.cmake
 
       - name: Install Qt
-        uses: jurplel/install-qt-action@v4
+        uses: jurplel/install-qt-action@v3
         with:
           version: '6.8.3'
           target: desktop

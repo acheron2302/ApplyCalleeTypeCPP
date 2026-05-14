@@ -6,3 +6,7 @@ CMakeSettings.json
 nul
 
 .kilo/
+
+.vs/
+
+out/
