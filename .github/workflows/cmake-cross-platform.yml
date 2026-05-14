@@ -27,7 +27,7 @@ jobs:
             cpp_compiler: g++
             build_type: Release
             artifact_name: ApplyCalleeTypeEx-linux-gcc
-            qt_arch: gcc_64
+            qt_arch: linux_gcc_64
             plugin_glob: "*.so"
 
     steps:
