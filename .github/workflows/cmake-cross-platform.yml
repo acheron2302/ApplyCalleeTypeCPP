@@ -52,6 +52,7 @@ jobs:
           version: '6.8.3'
           target: desktop
           arch: ${{ matrix.qt_arch }}
+          aqtversion: ''
           cache: true
 
       - name: Setup MSVC developer environment
