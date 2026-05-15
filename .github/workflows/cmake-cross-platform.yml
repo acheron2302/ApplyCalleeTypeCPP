@@ -3,32 +3,99 @@ name: Build ApplyCalleeTypeEx Plugin
 on:
   push:
     branches: [main, master]
+    tags:
+      - "v*"
   pull_request:
     branches: [main, master]
   workflow_dispatch:
 
+permissions:
+  actions: read
+  contents: write
+
 jobs:
+  discover-sdk-tags:
+    name: Discover IDA SDK tags
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.discover.outputs.matrix }}
+    steps:
+      - name: Discover SDK tags
+        id: discover
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python3 <<'PY'
+          import json
+          import os
+          import re
+          import urllib.request
+
+          tags = []
+          page = 1
+          while True:
+              url = f"https://api.github.com/repos/HexRaysSA/ida-sdk/tags?per_page=100&page={page}"
+              req = urllib.request.Request(
+                  url,
+                  headers={
+                      "Accept": "application/vnd.github+json",
+                      "Authorization": f"Bearer {os.environ['GITHUB_TOKEN']}",
+                      "User-Agent": "ApplyCalleeTypeEx-CI",
+                  },
+              )
+              with urllib.request.urlopen(req, timeout=30) as response:
+                  batch = json.loads(response.read().decode("utf-8"))
+              if not batch:
+                  break
+              tags.extend(item["name"] for item in batch)
+              page += 1
+
+          def sort_key(tag):
+              numbers = tuple(int(part) for part in re.findall(r"\d+", tag))
+              return numbers, tag
+
+          tags = sorted(set(tags), key=sort_key, reverse=True)
+          if not tags:
+              raise SystemExit("No HexRaysSA/ida-sdk tags were discovered")
+
+          include = []
+          for tag in tags:
+              safe_tag = re.sub(r"[^A-Za-z0-9_.-]+", "-", tag).strip("-")
+              include.extend([
+                  {
+                      "os": "windows-latest",
+                      "c_compiler": "cl",
+                      "cpp_compiler": "cl",
+                      "build_type": "Release",
+                      "qt_arch": "win64_msvc2022_64",
+                      "plugin_glob": "*.dll",
+                      "sdk_ref": tag,
+                      "artifact_name": f"ApplyCalleeTypeEx-windows-msvc-{safe_tag}",
+                  },
+                  {
+                      "os": "ubuntu-latest",
+                      "c_compiler": "gcc",
+                      "cpp_compiler": "g++",
+                      "build_type": "Release",
+                      "qt_arch": "linux_gcc_64",
+                      "plugin_glob": "*.so",
+                      "sdk_ref": tag,
+                      "artifact_name": f"ApplyCalleeTypeEx-linux-gcc-{safe_tag}",
+                  },
+              ])
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"matrix={json.dumps({'include': include}, separators=(',', ':'))}\n")
+          PY
+
   build:
     name: ${{ matrix.artifact_name }}
+    needs: discover-sdk-tags
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - os: windows-latest
-            c_compiler: cl
-            cpp_compiler: cl
-            build_type: Release
-            artifact_name: ApplyCalleeTypeEx-windows-msvc
-            qt_arch: win64_msvc2022_64
-            plugin_glob: "*.dll"
-          - os: ubuntu-latest
-            c_compiler: gcc
-            cpp_compiler: g++
-            build_type: Release
-            artifact_name: ApplyCalleeTypeEx-linux-gcc
-            qt_arch: linux_gcc_64
-            plugin_glob: "*.so"
+      matrix: ${{ fromJson(needs.discover-sdk-tags.outputs.matrix) }}
 
     steps:
       - name: Checkout repository
@@ -39,10 +106,12 @@ jobs:
         with:
           repository: HexRaysSA/ida-sdk
           path: idasdk
+          ref: ${{ matrix.sdk_ref }}
 
       - name: Install ida-cmake
         shell: bash
         run: |
+          rm -rf idasdk/ida-cmake
           git clone --depth 1 https://github.com/allthingsida/ida-cmake.git idasdk/ida-cmake
           test -f idasdk/ida-cmake/bootstrap.cmake
 
@@ -98,6 +167,7 @@ jobs:
         run: |
           mkdir -p artifacts
           find "${IDABIN}/plugins" -type f -name '${{ matrix.plugin_glob }}' -exec cp {} artifacts/ \;
+          printf '%s\n' "${{ matrix.sdk_ref }}" > artifacts/ida-sdk-ref.txt
           ls -la artifacts
 
       - name: Upload build artifact
@@ -106,3 +176,37 @@ jobs:
           name: ${{ matrix.artifact_name }}
           path: artifacts/*
           if-no-files-found: error
+
+  release:
+    name: Publish release artifacts
+    needs: build
+    runs-on: ubuntu-latest
+    if: ${{ !cancelled() && github.event_name != 'pull_request' }}
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          path: downloaded-artifacts
+
+      - name: Package release assets
+        shell: bash
+        run: |
+          test -d downloaded-artifacts || { echo "No artifacts were downloaded"; exit 1; }
+          mkdir -p release-assets
+          for artifact_dir in downloaded-artifacts/*; do
+            test -d "$artifact_dir" || continue
+            artifact_name="$(basename "$artifact_dir")"
+            (cd "$artifact_dir" && zip -r "../../release-assets/${artifact_name}.zip" .)
+          done
+          test -n "$(find release-assets -type f -name '*.zip' -print -quit)" || { echo "No release assets were packaged"; exit 1; }
+          ls -la release-assets
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || format('applycallee-autobuild-{0}', github.run_number) }}
+          name: ApplyCalleeTypeEx auto build ${{ github.run_number }}
+          files: release-assets/*.zip
+          fail_on_unmatched_files: true
+          generate_release_notes: true
