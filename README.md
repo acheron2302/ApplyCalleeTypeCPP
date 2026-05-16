@@ -72,8 +72,9 @@ If `Qt6_DIR` is not set, CMake will try to find Qt automatically via `find_packa
 ### 3. Build
 
 ```bash
-cmake -B build
-cmake --build build
+cmake -P cmkr.cmake    # Generate CMakeLists.txt from cmake.toml
+cmake -B build         # Configure
+cmake --build build    # Compile
 ```
 
 The plugin output goes to `$IDABIN/plugins/` (set via the `IDABIN` environment variable, defaults to SDK plugin directory).

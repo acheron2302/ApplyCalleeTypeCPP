@@ -149,7 +149,7 @@ jobs:
 
       - name: Generate CMake from cmkr
         shell: bash
-        run: cmake -P cmkr.cmake
+        run: env -u CI cmake -P cmkr.cmake
 
       - name: Configure CMake
         shell: bash
