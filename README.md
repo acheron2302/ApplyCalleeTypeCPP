@@ -1,343 +1,195 @@
-# hello_idax
+# ApplyCalleeTypeEx
 
-A minimal, cross-platform IDA Pro plugin template using [idax](https://github.com/19h/idax) and [cmkr](https://cmkr.build/).
+Apply callee type to indirect CALL instructions in IDA Pro. Press **Shift+A** on a `call` instruction to assign a function prototype from manual input, TIL type libraries, or local database types.
 
-This template provides a complete starting point for developing IDA Pro plugins in modern C++23, with automatic dependency management and a streamlined build process.
-
----
-
-## Table of Contents
-
-1. [Introduction](#introduction)
-2. [Requirements](#requirements)
-3. [Setup](#setup)
-4. [Build Instructions](#build-instructions)
+Built with [idax](https://github.com/19h/idax) (C++23 IDA SDK wrapper), Qt 6.8.2 dialogs, and [cmkr](https://cmkr.build/).
 
 ---
 
-## Introduction
+## Features
 
-**hello_idax** is a minimal "Hello, World!" plugin for IDA Pro that demonstrates:
-
-- Modern C++23 plugin development using the [idax](https://github.com/19h/idax) wrapper library
-- Type-safe, idiomatic C++ API instead of raw IDA SDK C calls
-- Cross-platform support (Windows, Linux, macOS)
-- Automatic dependency fetching (no manual library installation)
-- Clean build system using [cmkr](https://cmkr.build/) (CMake with TOML configuration)
-
-When activated in IDA Pro, this plugin prints "Hello, World!" to the output window.
-
-### Project Structure
-
-```
-hello_idax/
-├── cmake.toml          # cmkr build configuration (TOML format)
-├── src/
-│   └── hello.cpp       # Plugin source code
-├── deps/               # Fetched dependencies (auto-populated)
-├── build/              # Build output directory (generated)
-└── README.md           # This file
-```
+- **Three type sources**: manual C-declaration input, TIL (type library) types, and local database types
+- **Real-world input tolerant**: strips SAL annotations, `__declspec`, calling-convention macros, bracket annotations, and normalizes whitespace automatically
+- **Cross-platform**: Windows (MSVC) and Linux (GCC) via GitHub Actions CI
+- **Auto-builds** for latest IDA SDK v9.2 and v9.3 tags
 
 ---
 
 ## Requirements
 
-### Mandatory
-
-| Component | Version | Purpose |
-|-----------|---------|---------|
-| **CMake** | 3.27+ | Build system generator (bootstraps cmkr) |
-| **cmkr** | auto | CMake TOML frontend (auto-bootstrapped) |
-| **C++ Compiler** | C++20 capable | Plugin compilation |
-| **IDA SDK** | Any recent version | IDA Pro development kit |
-| **ida-cmake** | latest | IDA SDK CMake integration |
-| **IDASDK** env var | Set to SDK path | SDK location discovery |
-
-### Compiler Requirements
-
-- **Clang**: 17 or later
-- **GCC**: 14 or later  
-- **MSVC**: Visual Studio 2022 17.10 or later
-
-### Supported Platforms
-
-- Windows (x64)
-- Linux (x64)
-- macOS (x64, ARM64)
+| Component | Version | Notes |
+|-----------|---------|-------|
+| **CMake** | 3.27+ | Build system |
+| **C++ Compiler** | C++23 capable | MSVC 2022, GCC 14+, Clang 17+ |
+| **IDA SDK** | 9.2 or 9.3 | From [HexRaysSA/ida-sdk](https://github.com/HexRaysSA/ida-sdk) |
+| **ida-cmake** | latest | Cloned into IDA SDK root |
+| **Qt 6** | 6.8.2 | Core, Gui, Widgets components |
+| **IDASDK** env var | — | Points to IDA SDK root directory |
 
 ---
 
 ## Setup
 
-### Step 1: Bootstrap cmkr
-
-cmkr is automatically bootstrapped when you run CMake. No manual installation needed.
-
-To bootstrap cmkr manually:
-```bash
-cmake -P cmkr.cmake
-```
-
-### Step 2: Install IDA SDK
-
-1. Download the IDA SDK from [Hex-Rays](https://hex-rays.com/ida-pro/)
-2. Extract it to a known location (e.g., `~/idasdk` or `C:\idasdk`)
-
-### Step 3: Set IDASDK Environment Variable
-
-**Linux/macOS (bash/zsh):**
-```bash
-# Add to ~/.bashrc or ~/.zshrc
-export IDASDK=/path/to/idasdk
-
-# Apply immediately
-source ~/.bashrc  # or ~/.zshrc
-```
-
-**Windows (PowerShell):**
-```powershell
-# Set for current session
-$env:IDASDK = "C:\path\to\idasdk"
-
-# Set permanently (requires admin)
-[Environment]::SetEnvironmentVariable("IDASDK", "C:\path\to\idasdk", "User")
-```
-
-**Windows (CMD):**
-```cmd
-setx IDASDK C:\path\to\idasdk
-```
-
-Verify the variable is set:
-```bash
-echo $IDASDK        # Linux/macOS
-echo %IDASDK%       # Windows CMD
-$env:IDASDK         # Windows PowerShell
-```
-
-### Step 4: Install ida-cmake
-
-ida-cmake provides CMake integration for the IDA SDK.
+### 1. Clone and install ida-cmake
 
 ```bash
-cd $IDASDK                    # Or your IDA SDK directory
-git clone https://github.com/0xeb/ida-cmake.git
+git clone <this-repo>
+export IDASDK=/path/to/ida-sdk
+cd $IDASDK
+git clone https://github.com/allthingsida/ida-cmake.git ida-cmake
 ```
 
-Verify installation:
+### 2. Configure Qt6 path in `cmake.toml`
+
+> **Important**: You must update the `Qt6_DIR` path in `cmake.toml` to point to your local Qt 6.8.2 build.
+
+Open `cmake.toml` and find this block near line 64:
+
+```cmake
+# Find IDA's Qt6 cmake config
+if(EXISTS "E:/tools/qt-build/linux/qt-yusa.tar/qt-yusa/x64win/lib/cmake/Qt6")
+    set(Qt6_DIR "E:/tools/qt-build/linux/qt-yusa.tar/qt-yusa/x64win/lib/cmake/Qt6" CACHE PATH "Qt6 CMake directory" FORCE)
+    message(STATUS "Found IDA Qt6 at: ${Qt6_DIR}")
+endif()
+```
+
+Replace the path with your local Qt 6.8.2 cmake directory. Examples:
+
+**Windows (MSVC Qt build):**
+```cmake
+if(EXISTS "C:/Qt/6.8.2/msvc2022_64/lib/cmake/Qt6")
+    set(Qt6_DIR "C:/Qt/6.8.2/msvc2022_64/lib/cmake/Qt6" CACHE PATH "Qt6 CMake directory" FORCE)
+```
+
+**Linux (GCC Qt build):**
+```cmake
+if(EXISTS "/opt/Qt/6.8.2/gcc_64/lib/cmake/Qt6")
+    set(Qt6_DIR "/opt/Qt/6.8.2/gcc_64/lib/cmake/Qt6" CACHE PATH "Qt6 CMake directory" FORCE)
+```
+
+If `Qt6_DIR` is not set, CMake will try to find Qt automatically via `find_package(Qt6)`. The `jurplel/install-qt-action` in CI handles this automatically.
+
+### 3. Build
+
 ```bash
-ls $IDASDK/ida-cmake/bootstrap.cmake
+cmake -B build
+cmake --build build
 ```
 
-**Linux/macOS (bash/zsh):**
+The plugin output goes to `$IDABIN/plugins/` (set via the `IDABIN` environment variable, defaults to SDK plugin directory).
+
+### 4. Install in IDA Pro
+
+Copy the built plugin to your IDA Pro plugins directory:
+
 ```bash
-# Add to ~/.bashrc or ~/.zshrc
-export IDASDK=/path/to/idasdk
+# Linux
+cp build/ApplyCalleeTypeEx.so ~/ida-pro/plugins/
 
-# Apply immediately
-source ~/.bashrc  # or ~/.zshrc
-```
-
-**Windows (PowerShell):**
-```powershell
-# Set for current session
-$env:IDASDK = "C:\path\to\idasdk"
-
-# Set permanently (requires admin)
-[Environment]::SetEnvironmentVariable("IDASDK", "C:\path\to\idasdk", "User")
-```
-
-**Windows (CMD):**
-```cmd
-setx IDASDK C:\path\to\idasdk
-```
-
-Verify the variable is set:
-```bash
-echo $IDASDK        # Linux/macOS
-echo %IDASDK%       # Windows CMD
-$env:IDASDK         # Windows PowerShell
+# Windows
+copy build\Release\ApplyCalleeTypeEx.dll "%IDA_DIR%\plugins\"
 ```
 
 ---
 
-## Build Instructions
+## Usage
 
-### Quick Build
+1. Open a database in IDA Pro
+2. Place the cursor on an indirect `call` instruction
+3. Press **Shift+A** (or Edit → Operand type → ApplyCalleeTypeEx)
+4. Choose a type source:
+   - **Enter Manually** — paste or type a C function prototype
+   - **Standard Type (TIL)** — browse types from loaded type libraries
+   - **Local Type** — browse types defined in the current database
+5. The function pointer type is applied to the call target
 
-```bash
-# 1. Set IDASDK environment variable (if not already set)
-export IDASDK=/path/to/idasdk  # Linux/macOS
-$env:IDASDK = "C:\path\to\idasdk"  # Windows PowerShell
+Examples of accepted input:
 
-# 2. Generate build files (cmkr is bootstrapped automatically)
-cmake -B build
-
-# 3. Build the plugin
-cmake --build build
+```
+UINT WinExec(LPCSTR lpCmdLine, UINT uCmdShow);
+typedef UINT (WINAPI *PWINEXEC)(LPCSTR, UINT);
+NTSYSAPI NTSTATUS NTAPI LdrGetProcedureAddress(_In_ PVOID DllHandle, ...);
 ```
 
-### Detailed Build Steps
+---
 
-#### 1. Bootstrap cmkr
+## CI/CD
 
-cmkr is automatically bootstrapped when you run `cmake -B build`. The `cmkr.cmake` script will:
-- Download and build cmkr if not present
-- Generate `CMakeLists.txt` from `cmake.toml`
+GitHub Actions automatically builds the plugin for every push and PR.
 
-If you need to regenerate CMakeLists.txt after modifying `cmake.toml`:
-```bash
-cmake -P cmkr.cmake
-cmake -B build
+- **SDK versions**: latest `v9.3.x` and `v9.2.x` tags from [HexRaysSA/ida-sdk](https://github.com/HexRaysSA/ida-sdk)
+- **Platforms**: Windows (MSVC) and Linux (GCC)
+- **Qt**: 6.8.2 via `jurplel/install-qt-action`
+- **Artifacts**: `.dll` / `.so` files uploaded per build
+- **Releases**: auto-published on push to `main`/`master` (not on PRs)
+
+---
+
+## Project Structure
+
 ```
-
-#### 2. Configure Build
-
-Generate the build system files:
-
-```bash
-cmake -B build
+ApplyCalleeTypeEx/
+├── cmake.toml                 # cmkr build configuration
+├── cmkr.cmake                 # cmkr bootstrap (auto)
+├── CMakeLists.txt             # Generated — do not edit
+├── .github/workflows/
+│   └── cmake-cross-platform.yml  # CI/CD
+├── src/
+│   ├── main.cpp               # Plugin entry, action handler, type applier
+│   ├── preprocessing.hpp/cpp  # Prototype cleaning (SAL, declspec, etc.)
+│   └── qt_dialogs.hpp/cpp     # Qt dialogs (type source, manual input, TIL/local browser)
+└── README.md
 ```
-
-On first run, this will:
-- Fetch idax from GitHub automatically
-- Bootstrap ida-cmake from your IDA SDK
-- Configure compiler settings for your platform
-
-#### 3. Compile
-
-Build the plugin:
-
-```bash
-cmake --build build
-```
-
-For multi-config generators (Visual Studio, Ninja Multi-Config):
-```bash
-cmake --build build --config Release
-```
-
-#### 4. Output Location
-
-The compiled plugin will be at:
-
-| Platform | Output Path |
-|----------|-------------|
-| Windows | `build/hello.dll` |
-| Linux | `build/hello.so` |
-| macOS | `build/hello.dylib` |
-
-### Installation
-
-Copy the plugin to your IDA Pro plugins directory:
-
-**Linux/macOS:**
-```bash
-cp build/hello.so $IDA_DIR/plugins/
-# Or create symlink for development:
-ln -s $(pwd)/build/hello.so $IDA_DIR/plugins/hello.so
-```
-
-**Windows:**
-```cmd
-copy build\Release\hello.dll %IDA_DIR%\plugins\
-```
-
-### Usage in IDA Pro
-
-1. Start IDA Pro
-2. Open any database
-3. Activate the plugin:
-   - **Menu**: Edit → Plugins → Hello
-   - **Hotkey**: `Ctrl-Alt-H`
-4. Check the Output window for "Hello, World!"
 
 ---
 
 ## Troubleshooting
 
-### "cmkr: command not found"
+### `IDASDK environment variable is not set`
 
-cmkr is automatically bootstrapped by `cmkr.cmake`. Just run:
+Set the `IDASDK` variable:
+
 ```bash
-cmake -P cmkr.cmake
+export IDASDK=/path/to/ida-sdk        # Linux
+$env:IDASDK = "C:\path\to\ida-sdk"    # Windows PowerShell
 ```
 
-### "IDASDK environment variable is not set"
+### `Could not find ida-cmake/bootstrap.cmake`
 
-Set the `IDASDK` environment variable pointing to your IDA SDK root (see [Setup - Step 3](#step-3-set-idasdk-environment-variable)).
+Clone ida-cmake into your SDK:
 
-### "Could not find ida-cmake/bootstrap.cmake"
-
-ida-cmake is not installed in your IDA SDK. Install it:
 ```bash
 cd $IDASDK
-git clone https://github.com/0xeb/ida-cmake.git
+git clone https://github.com/allthingsida/ida-cmake.git ida-cmake
 ```
 
-### FetchContent fails to download idax
+### `find_package(Qt6) fails`
 
-Check your internet connection. You can also manually clone idax:
+Either set `Qt6_DIR` in `cmake.toml` (see Setup step 2) or pass it to CMake:
+
 ```bash
-cd deps
-git clone https://github.com/19h/idax.git
+cmake -B build -DQt6_DIR=/path/to/Qt/6.8.2/gcc_64/lib/cmake/Qt6
 ```
 
-Then re-run `cmake -B build`.
+### Type parsing fails
 
-### "No CMAKE_CXX_COMPILER could be found"
+- Ensure the input is a function declaration or function pointer typedef
+- Check that SAL annotations and calling conventions are stripped (preprocessing handles most common patterns)
+- Very long declarations (>4096 chars) are truncated
 
-Install a C++23 capable compiler:
-- **Linux**: `sudo apt install clang-17` or `sudo apt install g++-14`
-- **macOS**: Install Xcode Command Line Tools
-- **Windows**: Install Visual Studio 2022 with C++ workload
+### `std::atomic::dont_use_wait` build error
 
----
-
-## Customizing the Template
-
-To create your own plugin:
-
-1. **Rename the project** in `cmake.toml`:
-   ```toml
-   [project]
-   name = "my_plugin"
-   ```
-
-2. **Rename the target** in `cmake.toml`:
-   ```toml
-   [target.myplugin]
-   type = "shared"
-   sources = ["src/myplugin.cpp"]
-   ```
-
-3. **Update the plugin class** in `src/hello.cpp`:
-   ```cpp
-   class MyPlugin final : public ida::plugin::Plugin {
-       // ... your implementation
-   };
-   IDAX_PLUGIN(MyPlugin);
-   ```
-
-4. **Re-run cmake** to build:
-   ```bash
-   cmake -B build
-   cmake --build build
-   ```
-
----
-
-## References
-
-- [idax Repository](https://github.com/19h/idax)
-- [idax Plugin Examples](https://github.com/19h/idax/tree/master/examples/plugin)
-- [cmkr Documentation](https://cmkr.build/cmake-toml/)
-- [ida-cmake Repository](https://github.com/0xeb/ida-cmake)
-- [IDA Pro SDK Documentation](https://hex-rays.com/products/ida/support/idapronotes.shtml)
+This is caused by an IDA SDK macro that renames `wait` to `dont_use_wait`, corrupting C++23 `<atomic>` headers. The fix is applied automatically during CMake configure — if it persists, verify that `cmake.toml` contains the `sdk_bridge.hpp` patch block in the `[target.ApplyCalleeTypeEx]` section.
 
 ---
 
 ## License
 
-This template is provided as-is for IDA Pro plugin development.
+MIT
+
+## References
+
+- [idax — A beautiful, idiomatic IDA C++ SDK](https://github.com/19h/idax)
+- [cmkr — CMake with TOML](https://cmkr.build/)
+- [ida-cmake — IDA SDK CMake integration](https://github.com/allthingsida/ida-cmake)
+- [IDA Pro SDK](https://hex-rays.com/products/ida/support/idadoc/)
