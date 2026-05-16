@@ -108,6 +108,7 @@ private:
 
     QTableWidget* table_ = nullptr;
     QLineEdit* search_ = nullptr;
+    QPushButton* apply_btn_ = nullptr;
     QString result_name_;
     uint64_t ea_ = 0;
 };
@@ -136,6 +137,7 @@ private:
 
     QListWidget* list_ = nullptr;
     QLineEdit* search_ = nullptr;
+    QPushButton* apply_btn_ = nullptr;
     QString result_name_;
     uint64_t ea_ = 0;
 };

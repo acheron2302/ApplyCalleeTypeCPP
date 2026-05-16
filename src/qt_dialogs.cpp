@@ -49,7 +49,8 @@ void populate_til_types_impl(QListWidget* list) {
     
     auto result = ida::type::named_types();
     if (!result) {
-        auto* item = new QListWidgetItem("(TIL enumeration failed)");
+        auto* item = new QListWidgetItem(QString("(TIL enumeration failed: %1)")
+            .arg(QString::fromStdString(result.error().message)));
         item->setFlags(item->flags() & ~Qt::ItemIsSelectable);
         list->addItem(item);
         return;
@@ -73,7 +74,8 @@ void populate_local_types_impl(QListWidget* list) {
         // Use idax API for local type enumeration
         auto count_result = ida::type::local_type_count();
         if (!count_result) {
-            auto* item = new QListWidgetItem("(Error getting local type count)");
+            auto* item = new QListWidgetItem(QString("(Error getting local type count: %1)")
+                .arg(QString::fromStdString(count_result.error().message)));
             item->setFlags(item->flags() & ~Qt::ItemIsSelectable);
             list->addItem(item);
             return;
@@ -98,8 +100,8 @@ void populate_local_types_impl(QListWidget* list) {
                 // Skip this ordinal on error
             }
         }
-    } catch (const std::exception&) {
-        auto* item = new QListWidgetItem("(Error enumerating local types)");
+    } catch (const std::exception& e) {
+        auto* item = new QListWidgetItem(QString("(Error enumerating local types: %1)").arg(e.what()));
         item->setFlags(item->flags() & ~Qt::ItemIsSelectable);
         list->addItem(item);
     } catch (...) {
@@ -148,6 +150,10 @@ void TypeSourceDialog::setup_ui() {
     standard_btn->setToolTip("Browse loaded TIL (type library) types");
     layout->addWidget(standard_btn);
 
+    auto* local_btn = new QPushButton("Local Type");
+    local_btn->setToolTip("Browse types defined locally in the database");
+    layout->addWidget(local_btn);
+
     layout->addSpacing(12);
 
     auto* cancel_btn = new QPushButton("Cancel");
@@ -156,6 +162,7 @@ void TypeSourceDialog::setup_ui() {
 
     connect(manual_btn, &QPushButton::clicked, this, &TypeSourceDialog::on_manual_clicked);
     connect(standard_btn, &QPushButton::clicked, this, &TypeSourceDialog::on_standard_clicked);
+    connect(local_btn, &QPushButton::clicked, this, &TypeSourceDialog::on_local_clicked);
     connect(cancel_btn, &QPushButton::clicked, this, &TypeSourceDialog::on_cancel_clicked);
 }
 
@@ -370,6 +377,7 @@ void TilTypeDialog::setup_ui() {
     apply_btn->setEnabled(false);
     apply_btn->setDefault(true);
     row->addWidget(apply_btn);
+    apply_btn_ = apply_btn;
 
     auto* cancel_btn = new QPushButton("Cancel");
     row->addWidget(cancel_btn);
@@ -454,9 +462,8 @@ void TilTypeDialog::on_type_selected(int row, int column) {
 }
 
 void TilTypeDialog::on_selection_changed() {
-    auto* apply_btn = findChild<QPushButton*>("Apply");
-    if (apply_btn) {
-        apply_btn->setEnabled(table_->currentRow() >= 0);
+    if (apply_btn_) {
+        apply_btn_->setEnabled(table_->currentRow() >= 0);
     }
 }
 
@@ -516,6 +523,7 @@ void LocalTypeDialog::setup_ui() {
     apply_btn->setEnabled(false);
     apply_btn->setDefault(true);
     row->addWidget(apply_btn);
+    apply_btn_ = apply_btn;
 
     auto* cancel_btn = new QPushButton("Cancel");
     row->addWidget(cancel_btn);
@@ -546,9 +554,8 @@ void LocalTypeDialog::on_type_selected(QListWidgetItem* item) {
 }
 
 void LocalTypeDialog::on_selection_changed() {
-    auto* apply_btn = findChild<QPushButton*>("Apply");
-    if (apply_btn) {
-        apply_btn->setEnabled(list_->currentItem() != nullptr);
+    if (apply_btn_) {
+        apply_btn_->setEnabled(list_->currentItem() != nullptr);
     }
 }
 

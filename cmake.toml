@@ -69,6 +69,7 @@ endif()
 
 [fetch-content.idax]
 git = "https://github.com/acheron2302/idax.git"
+tag = "78847f113d06b52b02a64fa651e0d6d401093b0f"
 subdir = "AVOID_calling_ADD_SUBDIR_in_subseqeuent_MAKEAVILABLE"
 
 [fetch-content.fmt]
@@ -84,6 +85,22 @@ find_package(Qt6 6.8.2 REQUIRED COMPONENTS Core Gui Widgets)
 
 # Enable AUTOMOC for Qt moc generation
 set(CMAKE_AUTOMOC ON)
+
+# Fix idax: IDA SDK defines a `wait` macro that corrupts C++23 <atomic>/<stop_token>
+# headers. Include these headers BEFORE IDA SDK headers so include guards
+# prevent macro pollution from rewriting std::atomic::wait into dont_use_wait.
+set(IDAX_BRIDGE "${CMAKE_BINARY_DIR}/_deps/idax-src/src/detail/sdk_bridge.hpp")
+if(EXISTS "${IDAX_BRIDGE}")
+    file(READ "${IDAX_BRIDGE}" BRIDGE_CONTENT)
+    # Insert atomic/threading includes after <type_traits> and before IDA SDK includes
+    string(REPLACE
+        "#include <type_traits>\n\n// "
+        "#include <type_traits>\n#include <atomic>\n#include <stop_token>\n#include <thread>\n#include <mutex>\n#include <condition_variable>\n\n// "
+        BRIDGE_CONTENT "${BRIDGE_CONTENT}"
+    )
+    file(WRITE "${IDAX_BRIDGE}" "${BRIDGE_CONTENT}")
+    message(STATUS "Patched idax sdk_bridge.hpp to include C++23 atomics before IDA SDK")
+endif()
 
 # Create idax target
 set(IDAX_SRC_DIR "${CMAKE_BINARY_DIR}/_deps/idax-src")
