@@ -2,7 +2,7 @@
 
 Apply callee type to indirect CALL instructions in IDA Pro. Press **Shift+A** on a `call` instruction to assign a function prototype from manual input, TIL type libraries, or local database types.
 
-Built with [idax](https://github.com/19h/idax) (C++23 IDA SDK wrapper), Qt 6.8.2 dialogs, and [cmkr](https://cmkr.build/).
+Built with [idax](https://github.com/19h/idax) (C++23 IDA SDK wrapper), Qt 6.8.0 dialogs, and [cmkr](https://cmkr.build/).
 
 ---
 
@@ -23,7 +23,7 @@ Built with [idax](https://github.com/19h/idax) (C++23 IDA SDK wrapper), Qt 6.8.2
 | **C++ Compiler** | C++23 capable | MSVC 2022, GCC 14+, Clang 17+ |
 | **IDA SDK** | 9.2 or 9.3 | From [HexRaysSA/ida-sdk](https://github.com/HexRaysSA/ida-sdk) |
 | **ida-cmake** | latest | Cloned into IDA SDK root |
-| **Qt 6** | 6.8.2 | Core, Gui, Widgets components |
+| **Qt 6** | 6.8.0 | Core, Gui, Widgets components |
 | **IDASDK** env var | — | Points to IDA SDK root directory |
 
 ---
@@ -41,7 +41,7 @@ git clone https://github.com/allthingsida/ida-cmake.git ida-cmake
 
 ### 2. Configure Qt6 path in `cmake.toml`
 
-> **Important**: You must update the `Qt6_DIR` path in `cmake.toml` to point to your local Qt 6.8.2 build.
+> **Important**: You must update the `Qt6_DIR` path in `cmake.toml` to point to your local Qt 6.8.0 build.
 
 Open `cmake.toml` and find this block near line 64:
 
@@ -53,18 +53,18 @@ if(EXISTS "E:/tools/qt-build/linux/qt-yusa.tar/qt-yusa/x64win/lib/cmake/Qt6")
 endif()
 ```
 
-Replace the path with your local Qt 6.8.2 cmake directory. Examples:
+Replace the path with your local Qt 6.8.0 cmake directory. Examples:
 
 **Windows (MSVC Qt build):**
 ```cmake
-if(EXISTS "C:/Qt/6.8.2/msvc2022_64/lib/cmake/Qt6")
-    set(Qt6_DIR "C:/Qt/6.8.2/msvc2022_64/lib/cmake/Qt6" CACHE PATH "Qt6 CMake directory" FORCE)
+if(EXISTS "C:/Qt/6.8.0/msvc2022_64/lib/cmake/Qt6")
+    set(Qt6_DIR "C:/Qt/6.8.0/msvc2022_64/lib/cmake/Qt6" CACHE PATH "Qt6 CMake directory" FORCE)
 ```
 
 **Linux (GCC Qt build):**
 ```cmake
-if(EXISTS "/opt/Qt/6.8.2/gcc_64/lib/cmake/Qt6")
-    set(Qt6_DIR "/opt/Qt/6.8.2/gcc_64/lib/cmake/Qt6" CACHE PATH "Qt6 CMake directory" FORCE)
+if(EXISTS "/opt/Qt/6.8.0/gcc_64/lib/cmake/Qt6")
+    set(Qt6_DIR "/opt/Qt/6.8.0/gcc_64/lib/cmake/Qt6" CACHE PATH "Qt6 CMake directory" FORCE)
 ```
 
 If `Qt6_DIR` is not set, CMake will try to find Qt automatically via `find_package(Qt6)`. The `jurplel/install-qt-action` in CI handles this automatically.
@@ -119,7 +119,7 @@ GitHub Actions automatically builds the plugin for every push and PR.
 
 - **SDK versions**: latest `v9.3.x` and `v9.2.x` tags from [HexRaysSA/ida-sdk](https://github.com/HexRaysSA/ida-sdk)
 - **Platforms**: Windows (MSVC) and Linux (GCC)
-- **Qt**: 6.8.2 via `jurplel/install-qt-action`
+- **Qt**: 6.8.0 via `jurplel/install-qt-action`
 - **Artifacts**: `.dll` / `.so` files uploaded per build
 - **Releases**: auto-published on push to `main`/`master` (not on PRs)
 
@@ -168,7 +168,7 @@ git clone https://github.com/allthingsida/ida-cmake.git ida-cmake
 Either set `Qt6_DIR` in `cmake.toml` (see Setup step 2) or pass it to CMake:
 
 ```bash
-cmake -B build -DQt6_DIR=/path/to/Qt/6.8.2/gcc_64/lib/cmake/Qt6
+cmake -B build -DQt6_DIR=/path/to/Qt/6.8.0/gcc_64/lib/cmake/Qt6
 ```
 
 ### Type parsing fails

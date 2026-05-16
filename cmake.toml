@@ -81,7 +81,7 @@ tag = "e69e5f977d458f2650bb346dadf2ad30c5320281"
 cmake-before= """
 # Include idasdk (platform is now detected properly)
 find_package(idasdk REQUIRED)
-find_package(Qt6 6.8.2 REQUIRED COMPONENTS Core Gui Widgets)
+find_package(Qt6 6.8.0 REQUIRED COMPONENTS Core Gui Widgets)
 
 # Enable AUTOMOC for Qt moc generation
 set(CMAKE_AUTOMOC ON)
