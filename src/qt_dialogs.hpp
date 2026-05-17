@@ -21,6 +21,11 @@
 #include <QTableWidget>
 #include <QLineEdit>
 #include <QListWidgetItem>
+
+#ifdef QT_NAMESPACE
+QT_USE_NAMESPACE
+#endif
+
 #include <functional>
 #include <optional>
 #include <string>

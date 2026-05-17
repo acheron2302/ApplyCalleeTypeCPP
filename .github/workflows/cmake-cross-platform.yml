@@ -72,28 +72,16 @@ jobs:
           include = []
           for tag in keep_tags:
               safe_tag = re.sub(r"[^A-Za-z0-9_.-]+", "-", tag).strip("-")
-              include.extend([
-                  {
-                      "os": "windows-latest",
-                      "c_compiler": "cl",
-                      "cpp_compiler": "cl",
-                      "build_type": "Release",
-                      "qt_arch": "win64_msvc2022_64",
-                      "plugin_glob": "*.dll",
-                      "sdk_ref": tag,
-                      "artifact_name": f"ApplyCalleeTypeEx-windows-msvc-{safe_tag}",
-                  },
-                  {
-                      "os": "ubuntu-latest",
-                      "c_compiler": "gcc",
-                      "cpp_compiler": "g++",
-                      "build_type": "Release",
-                      "qt_arch": "linux_gcc_64",
-                      "plugin_glob": "*.so",
-                      "sdk_ref": tag,
-                      "artifact_name": f"ApplyCalleeTypeEx-linux-gcc-{safe_tag}",
-                  },
-              ])
+              include.append({
+                  "os": "windows-latest",
+                  "c_compiler": "cl",
+                  "cpp_compiler": "cl",
+                  "build_type": "Release",
+                  "qt_arch": "win64_msvc2022_64",
+                  "plugin_glob": "*.dll",
+                  "sdk_ref": tag,
+                  "artifact_name": f"ApplyCalleeTypeEx-windows-msvc-{safe_tag}",
+              })
 
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
               output.write(f"matrix={json.dumps({'include': include}, separators=(',', ':'))}\n")
@@ -125,7 +113,7 @@ jobs:
           git clone --depth 1 https://github.com/allthingsida/ida-cmake.git idasdk/ida-cmake
           test -f idasdk/ida-cmake/bootstrap.cmake
 
-      - name: Install Qt
+      - name: Install Qt headers and tools
         uses: jurplel/install-qt-action@v3
         with:
           version: '6.8.0'
@@ -134,8 +122,19 @@ jobs:
           aqtversion: ''
           cache: true
 
+      - name: Verify IDA SDK Qt import libraries
+        shell: pwsh
+        run: |
+          $qtLibDir = Join-Path "${{ github.workspace }}" 'idasdk/src/lib/x64_win_qt'
+          foreach ($lib in 'Qt6Core.lib', 'Qt6Gui.lib', 'Qt6Widgets.lib') {
+            $path = Join-Path $qtLibDir $lib
+            if (-not (Test-Path $path)) { throw "Missing IDA SDK Qt import library: $path" }
+            Write-Host "Found: $path"
+          }
+          "IDA_QT_LIB_DIR=$qtLibDir" -replace '\\', '/' | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host "IDA_QT_LIB_DIR=$qtLibDir"
+
       - name: Setup MSVC developer environment
-        if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: x64
@@ -165,6 +164,24 @@ jobs:
       - name: Build plugin
         run: cmake --build build --config ${{ matrix.build_type }} --parallel
 
+      - name: Verify Windows Qt namespace imports
+        shell: pwsh
+        run: |
+          $dll = Get-ChildItem "$env:IDABIN/plugins" -Filter "*.dll" -Recurse | Select-Object -First 1
+          if (-not $dll) { throw "No plugin DLL found in $env:IDABIN/plugins" }
+          Write-Host "IDA_QT_LIB_DIR=$env:IDA_QT_LIB_DIR"
+          Write-Host "Checking imports for: $($dll.FullName)"
+          $imports = & dumpbin /IMPORTS $dll.FullName
+
+          if ($imports -match 'QString@@|QDialog@@|QWidget@@|QFont@@|QObject@@') {
+            throw "Plugin imports non-namespaced public Qt symbols; expected QT_NAMESPACE=QT imports"
+          }
+
+          if ($imports -notmatch 'QString@QT@@|QDialog@QT@@|QWidget@QT@@|QFont@QT@@|QObject@QT@@') {
+            throw "Plugin does not appear to import QT_NAMESPACE=QT Qt symbols"
+          }
+          Write-Host "Plugin imports verified: QT_NAMESPACE=QT symbols present"
+
       - name: Verify build output
         shell: bash
         run: |
@@ -178,6 +195,7 @@ jobs:
           mkdir -p artifacts
           find "${IDABIN}/plugins" -type f -name '${{ matrix.plugin_glob }}' -exec cp {} artifacts/ \;
           printf '%s\n' "${{ matrix.sdk_ref }}" > artifacts/ida-sdk-ref.txt
+          printf 'IDA SDK ref: %s\nQt headers/tools: public Qt 6.8.0 via jurplel/install-qt-action\nQt import libs: %s/idasdk/src/lib/x64_win_qt\nQt namespace: QT\n' "${{ matrix.sdk_ref }}" "${{ github.workspace }}" > artifacts/build-info.txt
           ls -la artifacts
 
       - name: Upload build artifact

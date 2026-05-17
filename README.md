@@ -10,7 +10,7 @@ Built with [idax](https://github.com/19h/idax) (C++23 IDA SDK wrapper), Qt 6.8.0
 
 - **Three type sources**: manual C-declaration input, TIL (type library) types, and local database types
 - **Real-world input tolerant**: strips SAL annotations, `__declspec`, calling-convention macros, bracket annotations, and normalizes whitespace automatically
-- **Cross-platform**: Windows (MSVC) and Linux (GCC) via GitHub Actions CI
+- **Windows-only CI**: MSVC builds for latest IDA SDK v9.2 and v9.3 tags via GitHub Actions
 - **Auto-builds** for latest IDA SDK v9.2 and v9.3 tags
 
 ---
@@ -23,7 +23,7 @@ Built with [idax](https://github.com/19h/idax) (C++23 IDA SDK wrapper), Qt 6.8.0
 | **C++ Compiler** | C++23 capable | MSVC 2022, GCC 14+, Clang 17+ |
 | **IDA SDK** | 9.2 or 9.3 | From [HexRaysSA/ida-sdk](https://github.com/HexRaysSA/ida-sdk) |
 | **ida-cmake** | latest | Cloned into IDA SDK root |
-| **Qt 6** | 6.8.0 | Core, Gui, Widgets components |
+| **Qt 6** | 6.8.0 | Core, Gui, Widgets components. Headers and tools (moc) from public or IDA-compatible Qt. **Linking must use IDA SDK Qt import libs** from `idasdk/src/lib/x64_win_qt`. |
 | **IDASDK** env var | — | Points to IDA SDK root directory |
 
 ---
@@ -41,33 +41,17 @@ git clone https://github.com/allthingsida/ida-cmake.git ida-cmake
 
 ### 2. Configure Qt6 path in `cmake.toml`
 
-> **Important**: You must update the `Qt6_DIR` path in `cmake.toml` to point to your local Qt 6.8.0 build.
+> **Important for Windows**: The final plugin must link against the IDA SDK Qt import libraries (`idasdk/src/lib/x64_win_qt/*.lib`) to import `QT_NAMESPACE=QT` symbols. Stock/public Qt builds will produce plugins that fail to load with `LoadLibraryA` error 127. The build system overrides Qt imported target library locations automatically on Windows.
 
-Open `cmake.toml` and find this block near line 64:
+Qt headers and tools (moc) can come from any Qt 6.8.0 installation. Set the `Qt6_DIR` CMake variable to point to your Qt 6.8.0 build. You can either pass it on the CMake command line or set it in `cmake.toml`.
 
-```cmake
-# Find IDA's Qt6 cmake config
-if(EXISTS "E:/tools/qt-build/linux/qt-yusa.tar/qt-yusa/x64win/lib/cmake/Qt6")
-    set(Qt6_DIR "E:/tools/qt-build/linux/qt-yusa.tar/qt-yusa/x64win/lib/cmake/Qt6" CACHE PATH "Qt6 CMake directory" FORCE)
-    message(STATUS "Found IDA Qt6 at: ${Qt6_DIR}")
-endif()
+The `cmake.toml` Qt6_DIR logic prefers `Qt6_DIR`/`CMAKE_PREFIX_PATH` from the caller (CI or command line) and falls back to a local hard-coded path near line 73.
+
+```bash
+cmake -B build -DQt6_DIR=C:/your-qt-build/lib/cmake/Qt6
+# or
+cmake -B build -DCMAKE_PREFIX_PATH=C:/your-qt-build
 ```
-
-Replace the path with your local Qt 6.8.0 cmake directory. Examples:
-
-**Windows (MSVC Qt build):**
-```cmake
-if(EXISTS "C:/Qt/6.8.0/msvc2022_64/lib/cmake/Qt6")
-    set(Qt6_DIR "C:/Qt/6.8.0/msvc2022_64/lib/cmake/Qt6" CACHE PATH "Qt6 CMake directory" FORCE)
-```
-
-**Linux (GCC Qt build):**
-```cmake
-if(EXISTS "/opt/Qt/6.8.0/gcc_64/lib/cmake/Qt6")
-    set(Qt6_DIR "/opt/Qt/6.8.0/gcc_64/lib/cmake/Qt6" CACHE PATH "Qt6 CMake directory" FORCE)
-```
-
-If `Qt6_DIR` is not set, CMake will try to find Qt automatically via `find_package(Qt6)`. The `jurplel/install-qt-action` in CI handles this automatically.
 
 ### 3. Build
 
@@ -84,9 +68,6 @@ The plugin output goes to `$IDABIN/plugins/` (set via the `IDABIN` environment v
 Copy the built plugin to your IDA Pro plugins directory:
 
 ```bash
-# Linux
-cp build/ApplyCalleeTypeEx.so ~/ida-pro/plugins/
-
 # Windows
 copy build\Release\ApplyCalleeTypeEx.dll "%IDA_DIR%\plugins\"
 ```
@@ -119,9 +100,9 @@ NTSYSAPI NTSTATUS NTAPI LdrGetProcedureAddress(_In_ PVOID DllHandle, ...);
 GitHub Actions automatically builds the plugin for every push and PR.
 
 - **SDK versions**: latest `v9.3.x` and `v9.2.x` tags from [HexRaysSA/ida-sdk](https://github.com/HexRaysSA/ida-sdk)
-- **Platforms**: Windows (MSVC) and Linux (GCC)
-- **Qt**: 6.8.0 via `jurplel/install-qt-action`
-- **Artifacts**: `.dll` / `.so` files uploaded per build
+- **Platforms**: Windows (MSVC) only
+- **Qt**: 6.8.0 — public Qt headers/tools via `jurplel/install-qt-action`, IDA SDK-provided Qt import libs from `idasdk/src/lib/x64_win_qt` per SDK tag
+- **Artifacts**: `.dll` files uploaded per build
 - **Releases**: auto-published on push to `main`/`master` (not on PRs)
 
 ---
@@ -151,7 +132,6 @@ ApplyCalleeTypeEx/
 Set the `IDASDK` variable:
 
 ```bash
-export IDASDK=/path/to/ida-sdk        # Linux
 $env:IDASDK = "C:\path\to\ida-sdk"    # Windows PowerShell
 ```
 
@@ -166,11 +146,29 @@ git clone https://github.com/allthingsida/ida-cmake.git ida-cmake
 
 ### `find_package(Qt6) fails`
 
-Either set `Qt6_DIR` in `cmake.toml` (see Setup step 2) or pass it to CMake:
+Either set `Qt6_DIR` (see Setup step 2) or pass it to CMake:
 
 ```bash
-cmake -B build -DQt6_DIR=/path/to/Qt/6.8.0/gcc_64/lib/cmake/Qt6
+cmake -B build -DQt6_DIR=/path/to/Qt/6.8.0/win64_msvc2022_64/lib/cmake/Qt6
 ```
+
+### `LoadLibraryA` fails with error 127 on Windows
+
+Error 127 means a dependent DLL was found but an imported procedure was missing. For this plugin, the cause is linking against stock/public Qt import libraries instead of IDA SDK Qt import libraries (`idasdk/src/lib/x64_win_qt/*.lib`).
+
+The build system automatically overrides Qt imported target library locations on Windows with the IDA SDK-provided `.lib` files. Verify:
+
+1. The IDA SDK checkout contains `idasdk/src/lib/x64_win_qt/Qt6Core.lib`, `Qt6Gui.lib`, and `Qt6Widgets.lib`.
+2. The plugin was compiled with `QT_NAMESPACE=QT` (set automatically by cmake.toml on Windows).
+3. Check the plugin imports:
+
+```
+dumpbin /IMPORTS ApplyCalleeTypeEx.dll
+```
+
+A working build should import namespaced Qt symbols containing `@QT@@`, for example `?fromLatin1@QString@QT@@...`. A broken build imports non-namespaced symbols such as `?fromLatin1@QString@@...` without `@QT@@`.
+
+To fix: ensure the build uses `idasdk/src/lib/x64_win_qt/*.lib` Qt import libraries and `QT_NAMESPACE=QT`.
 
 ### Type parsing fails
 

@@ -60,10 +60,22 @@ message(STATUS "Set ENV{IDASDK} to: $ENV{IDASDK}")
 set(idasdk_DIR "${IDASDK_CMAKE_PATH}/ida-cmake")
 message(STATUS "Set idasdk_DIR to: ${idasdk_DIR}")
 
-# Find IDA's Qt6 cmake config
-if(EXISTS "E:/tools/qt-build/linux/qt-yusa.tar/qt-yusa/x64win/lib/cmake/Qt6")
-    set(Qt6_DIR "E:/tools/qt-build/linux/qt-yusa.tar/qt-yusa/x64win/lib/cmake/Qt6" CACHE PATH "Qt6 CMake directory" FORCE)
-    message(STATUS "Found IDA Qt6 at: ${Qt6_DIR}")
+# Find Qt6 CMake config — prefer caller-provided paths, fall back to local IDA-compatible Qt
+if(DEFINED Qt6_DIR)
+    message(STATUS "Using provided Qt6_DIR: ${Qt6_DIR}")
+elseif(DEFINED ENV{Qt6_DIR})
+    set(Qt6_DIR "$ENV{Qt6_DIR}" CACHE PATH "Qt6 CMake directory")
+    message(STATUS "Using Qt6_DIR from environment: ${Qt6_DIR}")
+elseif(DEFINED CMAKE_PREFIX_PATH)
+    message(STATUS "Qt6_DIR not set; relying on CMAKE_PREFIX_PATH: ${CMAKE_PREFIX_PATH}")
+elseif(DEFINED ENV{CMAKE_PREFIX_PATH})
+    set(CMAKE_PREFIX_PATH "$ENV{CMAKE_PREFIX_PATH}" CACHE PATH "CMake prefix path")
+    message(STATUS "Using CMAKE_PREFIX_PATH from environment: ${CMAKE_PREFIX_PATH}")
+elseif(EXISTS "E:/tools/qt-build/linux/qt-yusa.tar/qt-yusa/x64win/lib/cmake/Qt6")
+    set(Qt6_DIR "E:/tools/qt-build/linux/qt-yusa.tar/qt-yusa/x64win/lib/cmake/Qt6" CACHE PATH "Qt6 CMake directory")
+    message(STATUS "Found local IDA-compatible Qt6 at: ${Qt6_DIR}")
+else()
+    message(STATUS "Qt6_DIR not set and no local fallback found; find_package will search system paths")
 endif()
 """
 
@@ -118,6 +130,23 @@ target_include_directories(idax
 target_link_libraries(idax PUBLIC idasdk::plugin)
 target_compile_features(idax PUBLIC cxx_std_23)
 target_compile_definitions(idax PRIVATE FMT_HEADER_ONLY)
+
+# Windows: override Qt imported library locations with IDA SDK-provided import libs
+# so the plugin links against QT_NAMESPACE=QT symbols matching the IDA runtime.
+if(WIN32)
+    set(IDA_QT_LIB_DIR "${IDASDK_ACTUAL_PATH}/lib/x64_win_qt")
+    foreach(module Core Gui Widgets)
+        set(lib_path "${IDA_QT_LIB_DIR}/Qt6${module}.lib")
+        if(NOT EXISTS "${lib_path}")
+            message(FATAL_ERROR "Missing IDA SDK Qt import library: ${lib_path}")
+        endif()
+        message(STATUS "Overriding Qt6::${module} import lib with: ${lib_path}")
+        set_property(TARGET Qt6::${module} PROPERTY IMPORTED_IMPLIB_RELEASE "${lib_path}")
+        set_property(TARGET Qt6::${module} PROPERTY IMPORTED_IMPLIB_RELWITHDEBINFO "${lib_path}")
+        set_property(TARGET Qt6::${module} PROPERTY IMPORTED_IMPLIB_MINSIZEREL "${lib_path}")
+        set_property(TARGET Qt6::${module} PROPERTY IMPORTED_IMPLIB_DEBUG "${lib_path}")
+    endforeach()
+endif()
 """
 
 type = "shared"
@@ -127,6 +156,9 @@ compile-features = ["cxx_std_23"]
 link-libraries = ["idasdk::plugin", "idax", "Qt6::Core", "Qt6::Gui", "Qt6::Widgets"]
 include-directories = ["${CMAKE_BINARY_DIR}/_deps/fmt-src/include"]
 compile-definitions = ["FMT_HEADER_ONLY"]
+
+# Windows: define QT_NAMESPACE for namespaced IDA Qt compatibility
+windows.compile-definitions = ["QT_NAMESPACE=QT", "QT_USE_NAMESPACE"]
 
 # Windows: SUBSYSTEM:WINDOWS
 windows.link-options = ["/SUBSYSTEM:WINDOWS"]
