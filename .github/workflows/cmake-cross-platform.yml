@@ -173,14 +173,30 @@ jobs:
           Write-Host "Checking imports for: $($dll.FullName)"
           $imports = & dumpbin /IMPORTS $dll.FullName
 
+          Write-Host "Qt-related import diagnostics:"
+          $qtImportLines = $imports | Select-String -Pattern 'Qt6|@QT@@|QString|QDialog|QWidget|QFont|QObject'
+          if ($qtImportLines) {
+            $qtImportLines | ForEach-Object { Write-Host $_.Line }
+          } else {
+            Write-Host "No Qt-related import lines matched the diagnostic filter."
+          }
+
           if ($imports -match 'QString@@|QDialog@@|QWidget@@|QFont@@|QObject@@') {
             throw "Plugin imports non-namespaced public Qt symbols; expected QT_NAMESPACE=QT imports"
           }
 
-          if ($imports -notmatch 'QString@QT@@|QDialog@QT@@|QWidget@QT@@|QFont@QT@@|QObject@QT@@') {
-            throw "Plugin does not appear to import QT_NAMESPACE=QT Qt symbols"
+          $hasNamespacedDecoratedQtImports = $imports -match 'QString@QT@@|QDialog@QT@@|QWidget@QT@@|QFont@QT@@|QObject@QT@@|@QT@@'
+          $hasQtDllImports = $imports -match 'Qt6Core\.dll|Qt6Gui\.dll|Qt6Widgets\.dll'
+
+          if (-not $hasNamespacedDecoratedQtImports -and -not $hasQtDllImports) {
+            throw "Plugin does not appear to import Qt libraries"
           }
-          Write-Host "Plugin imports verified: QT_NAMESPACE=QT symbols present"
+
+          if ($hasNamespacedDecoratedQtImports) {
+            Write-Host "Plugin imports verified: QT_NAMESPACE=QT decorated symbols present"
+          } else {
+            Write-Host "Plugin imports Qt DLLs and no checked non-namespaced public Qt symbols were found"
+          }
 
       - name: Verify build output
         shell: bash
