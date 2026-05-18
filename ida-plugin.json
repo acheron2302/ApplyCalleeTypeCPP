@@ -1,0 +1,41 @@
+{
+  "IDAMetadataDescriptorVersion": 1,
+  "plugin": {
+    "name": "ApplyCalleeTypeCpp",
+    "entryPoint": "ApplyCalleTypeEx",
+    "version": "1.0.0",
+    "idaVersions": ">=9.3",
+    "platforms": [
+      "windows-x86_64",
+      "linux-x86_64",
+      "macos-x86_64",
+      "macos-aarch64"
+    ],
+    "description": "Applies a known function prototype to an indirect CALL instruction. This is a port from ApplyCalleeTypeEx for modern cpp with automatically ci/cd to compile with qt",
+    "license": "MIT",
+    "categories": [
+      "malware-analysis",
+      "api-scripting-and-automation",
+      "cpp-port"
+    ],
+    "keywords": [
+     "callee-type",
+      "indirect-call",
+      "apply-type",
+      "decompiler",
+      "pseudocode",
+      "malware-analysis",
+      "ida-9"
+      "cpp"
+    ],
+    "urls": {
+      "repository": "https://github.com/acheron2302/ApplyCalleeTypeCPP"
+    },
+    "authors": [
+      {
+        "name": "Kishou Yusa",
+        "email": "acheron2302@protonmail.com"
+      }
+    ],
+  }
+}
