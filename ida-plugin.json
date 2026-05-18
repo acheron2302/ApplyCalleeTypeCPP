@@ -6,10 +6,7 @@
     "version": "1.0.0",
     "idaVersions": ">=9.3",
     "platforms": [
-      "windows-x86_64",
-      "linux-x86_64",
-      "macos-x86_64",
-      "macos-aarch64"
+      "windows-x86_64"
     ],
     "description": "Applies a known function prototype to an indirect CALL instruction. This is a port from ApplyCalleeTypeEx for modern cpp with automatically ci/cd to compile with qt",
     "license": "MIT",
