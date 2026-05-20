@@ -1,5 +1,5 @@
 // qt_dialogs.cpp
-// Qt dialogs implementation for ApplyCalleeTypeEx plugin
+// Qt dialogs implementation for ApplyCalleTypeCpp plugin
 
 #include "qt_dialogs.hpp"
 
@@ -127,7 +127,7 @@ void populate_local_types(QListWidget* list) {
 
 TypeSourceDialog::TypeSourceDialog(QWidget* parent, uint64_t ea)
     : QDialog(parent), ea_(ea) {
-    setWindowTitle(QString("ApplyCalleeTypeEx - %1").arg(format_ea(ea)));
+    setWindowTitle(QString("ApplyCalleTypeCpp - %1").arg(format_ea(ea)));
     setMinimumWidth(400);
     setModal(true);
     setup_ui();
@@ -214,7 +214,7 @@ static const char* MANUAL_HINT =
 
 ManualTypeDialog::ManualTypeDialog(QWidget* parent, uint64_t ea, PreprocessFn preprocess_fn)
     : QDialog(parent), preprocess_fn_(std::move(preprocess_fn)), ea_(ea) {
-    setWindowTitle(QString("ApplyCalleeTypeEx — Enter Prototype (%1)").arg(format_ea(ea)));
+    setWindowTitle(QString("ApplyCalleTypeCpp — Enter Prototype (%1)").arg(format_ea(ea)));
     setMinimumSize(640, 500);
     setModal(true);
     setup_ui();
@@ -338,7 +338,7 @@ std::optional<std::string> ManualTypeDialog::show(QWidget* parent, uint64_t ea, 
 
 TilTypeDialog::TilTypeDialog(QWidget* parent, uint64_t ea)
     : QDialog(parent), ea_(ea) {
-    setWindowTitle(QString("ApplyCalleeTypeEx — Select TIL Type (%1)").arg(format_ea(ea)));
+    setWindowTitle(QString("ApplyCalleTypeCpp — Select TIL Type (%1)").arg(format_ea(ea)));
     setMinimumSize(700, 500);
     setModal(true);
     setup_ui();
@@ -495,7 +495,7 @@ std::optional<std::string> TilTypeDialog::show(QWidget* parent, uint64_t ea) {
 
 LocalTypeDialog::LocalTypeDialog(QWidget* parent, uint64_t ea)
     : QDialog(parent), ea_(ea) {
-    setWindowTitle(QString("ApplyCalleeTypeEx — Select Local Type (%1)").arg(format_ea(ea)));
+    setWindowTitle(QString("ApplyCalleTypeCpp — Select Local Type (%1)").arg(format_ea(ea)));
     setMinimumSize(500, 400);
     setModal(true);
     setup_ui();

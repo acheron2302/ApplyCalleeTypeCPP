@@ -1,14 +1,15 @@
 {
   "IDAMetadataDescriptorVersion": 1,
+  "$schema": "https://hcli.docs.hex-rays.com/schemas/ida-plugin.json",
   "plugin": {
-    "name": "ApplyCalleeTypeCpp",
-    "entryPoint": "ApplyCalleTypeEx",
+    "name": "ApplyCalleTypeCpp",
+    "entryPoint": "ApplyCalleTypeCpp",
     "version": "1.0.0",
     "idaVersions": ">=9.3",
     "platforms": [
       "windows-x86_64"
     ],
-    "description": "Applies a known function prototype to an indirect CALL instruction. This is a port from ApplyCalleeTypeEx for modern cpp with automatically ci/cd to compile with qt",
+    "description": "Applies a known function prototype to an indirect CALL instruction. Ported from ApplyCalleeTypeEx for modern C++ with automated CI/CD to compile with Qt.",
     "license": "MIT",
     "categories": [
       "malware-analysis",
@@ -16,13 +17,13 @@
       "cpp-port"
     ],
     "keywords": [
-     "callee-type",
+      "callee-type",
       "indirect-call",
       "apply-type",
       "decompiler",
       "pseudocode",
       "malware-analysis",
-      "ida-9"
+      "ida-9",
       "cpp"
     ],
     "urls": {
@@ -33,6 +34,6 @@
         "name": "Kishou Yusa",
         "email": "acheron2302@protonmail.com"
       }
-    ],
+    ]
   }
 }

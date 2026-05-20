@@ -1,5 +1,5 @@
 // preprocessing.hpp
-// Minimal preprocessing for ApplyCalleeTypeEx
+// Minimal preprocessing for ApplyCalleTypeCpp
 
 #ifndef PREPROCESSING_HPP
 #define PREPROCESSING_HPP

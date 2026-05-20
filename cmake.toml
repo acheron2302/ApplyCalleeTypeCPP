@@ -1,4 +1,4 @@
-# cmkr configuration for ApplyCalleeTypeEx - IDA Pro Plugin using idax
+# cmkr configuration for ApplyCalleTypeCpp - IDA Pro Plugin using idax
 # 
 # Build Instructions:
 #   1. Set IDASDK environment variable to your IDA SDK root
@@ -13,7 +13,7 @@ cmkr-include = "cmkr.cmake"
 qt6 = "Qt6_FOUND"
 
 [project]
-name = "ApplyCalleeTypeEx"
+name = "ApplyCalleTypeCpp"
 version = "1.0.0"
 description = "Apply callee type to indirect call location"
 languages = ["CXX"]
@@ -89,7 +89,7 @@ git = "https://github.com/fmtlib/fmt"
 tag = "e69e5f977d458f2650bb346dadf2ad30c5320281" 
 
 # Plugin target - standard CMake shared library
-[target.ApplyCalleeTypeEx]
+[target.ApplyCalleTypeCpp]
 cmake-before= """
 # Include idasdk (platform is now detected properly)
 find_package(idasdk REQUIRED)
@@ -163,7 +163,7 @@ windows.compile-definitions = ["QT_NAMESPACE=QT", "QT_USE_NAMESPACE"]
 # Windows: SUBSYSTEM:WINDOWS
 windows.link-options = ["/SUBSYSTEM:WINDOWS"]
 
-[target.ApplyCalleeTypeEx.properties]
+[target.ApplyCalleTypeCpp.properties]
 CXX_STANDARD_REQUIRED = true
 RUNTIME_OUTPUT_DIRECTORY = "${IDABIN}/plugins"
 LIBRARY_OUTPUT_DIRECTORY = "${IDABIN}/plugins"

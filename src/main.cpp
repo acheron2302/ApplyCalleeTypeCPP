@@ -1,4 +1,4 @@
-// idax_apply_callee_type_ex.cpp
+// apply_calle_type_cpp.cpp
 // Port of Mandiant FLARE ApplyCalleeTypeEx plugin to idax (C++23)
 // Applies function prototypes to indirect CALL instructions
 // Compatible with IDA Pro 8.x through 9.3+
@@ -24,13 +24,13 @@
 // -------------------- Constants --------------------
 
 namespace constants {
-constexpr std::string_view PLUGIN_NAME = "ApplyCalleeTypeEx";
+constexpr std::string_view PLUGIN_NAME = "ApplyCalleTypeCpp";
 constexpr std::string_view PLUGIN_COMMENT =
   "Apply callee type to indirect call location";
 constexpr std::string_view PLUGIN_HELP =
   "Place cursor on an indirect CALL and press Shift+A.";
-constexpr std::string_view ACTION_NAME = "dump-guy:apply_callee_type_ex";
-constexpr std::string_view ACTION_LABEL = "ApplyCalleeTypeEx";
+constexpr std::string_view ACTION_NAME = "dump-guy:apply_calle_type_cpp";
+constexpr std::string_view ACTION_LABEL = "ApplyCalleTypeCpp";
 constexpr std::string_view ACTION_HOTKEY = "Shift+A";
 constexpr std::string_view MENU_PATH = "Edit/Operand type/";
 }
@@ -38,7 +38,7 @@ constexpr std::string_view MENU_PATH = "Edit/Operand type/";
 // -------------------- Logging --------------------
 
 static void log_message(const std::string& msg) {
-  ida::ui::message("[ApplyCalleeTypeEx] " + msg + "\n");
+  ida::ui::message("[ApplyCalleTypeCpp] " + msg + "\n");
 }
 
 // -------------------- Type Parsing --------------------
@@ -326,7 +326,7 @@ public:
           std::string(constants::ACTION_NAME),
           std::string(constants::ACTION_LABEL),
           nullptr,
-          "applycalleetypeex/",
+          "applycalleetypecpp/",
           -1);
       }
     });
@@ -390,7 +390,7 @@ public:
       hooks_ = std::make_unique<ApplyCalleeTypeHooks>();
       hooks_->hook();
 
-      ida::ui::message("ApplyCalleeTypeEx ready\n");
+      ida::ui::message("ApplyCalleTypeCpp ready\n");
       return true;
     } catch (const std::exception& e) {
       ida::ui::warning(fmt::format("Plugin init failed: {}", e.what()));

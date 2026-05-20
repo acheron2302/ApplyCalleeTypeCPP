@@ -1,5 +1,5 @@
 // qt_dialogs.hpp
-// Qt dialogs for ApplyCalleeTypeEx plugin
+// Qt dialogs for ApplyCalleTypeCpp plugin
 // These dialogs are optional - the plugin will use IDA forms if Qt is not available
 
 #ifndef QT_DIALOGS_HPP

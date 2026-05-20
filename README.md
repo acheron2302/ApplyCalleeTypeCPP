@@ -1,4 +1,4 @@
-# ApplyCalleeTypeEx
+# ApplyCalleTypeCpp
 
 Apply callee type to indirect CALL instructions in IDA Pro. Press **Shift+A** on a `call` instruction to assign a function prototype from manual input, TIL type libraries, or local database types.
 
@@ -69,7 +69,7 @@ Copy the built plugin to your IDA Pro plugins directory:
 
 ```bash
 # Windows
-copy build\Release\ApplyCalleeTypeEx.dll "%IDA_DIR%\plugins\"
+copy build\Release\ApplyCalleTypeCpp.dll "%IDA_DIR%\plugins\"
 ```
 
 ---
@@ -78,7 +78,7 @@ copy build\Release\ApplyCalleeTypeEx.dll "%IDA_DIR%\plugins\"
 
 1. Open a database in IDA Pro
 2. Place the cursor on an indirect `call` instruction
-3. Press **Shift+A** (or Edit → Operand type → ApplyCalleeTypeEx)
+3. Press **Shift+A** (or Edit → Operand type → ApplyCalleTypeCpp)
 4. Choose a type source:
    - **Enter Manually** — paste or type a C function prototype
    - **Standard Type (TIL)** — browse types from loaded type libraries
@@ -110,7 +110,7 @@ GitHub Actions automatically builds the plugin for every push and PR.
 ## Project Structure
 
 ```
-ApplyCalleeTypeEx/
+ApplyCalleTypeCpp/
 ├── cmake.toml                 # cmkr build configuration
 ├── cmkr.cmake                 # cmkr bootstrap (auto)
 ├── CMakeLists.txt             # Generated — do not edit
@@ -163,7 +163,7 @@ The build system automatically overrides Qt imported target library locations on
 3. Check the plugin imports:
 
 ```
-dumpbin /IMPORTS ApplyCalleeTypeEx.dll
+dumpbin /IMPORTS ApplyCalleTypeCpp.dll
 ```
 
 A working build should import namespaced Qt symbols containing `@QT@@`, for example `?fromLatin1@QString@QT@@...`. A broken build imports non-namespaced symbols such as `?fromLatin1@QString@@...` without `@QT@@`.
@@ -178,7 +178,7 @@ To fix: ensure the build uses `idasdk/src/lib/x64_win_qt/*.lib` Qt import librar
 
 ### `std::atomic::dont_use_wait` build error
 
-This is caused by an IDA SDK macro that renames `wait` to `dont_use_wait`, corrupting C++23 `<atomic>` headers. The fix is applied automatically during CMake configure — if it persists, verify that `cmake.toml` contains the `sdk_bridge.hpp` patch block in the `[target.ApplyCalleeTypeEx]` section.
+This is caused by an IDA SDK macro that renames `wait` to `dont_use_wait`, corrupting C++23 `<atomic>` headers. The fix is applied automatically during CMake configure — if it persists, verify that `cmake.toml` contains the `sdk_bridge.hpp` patch block in the `[target.ApplyCalleTypeCpp]` section.
 
 ---
 
