@@ -59,9 +59,9 @@ jobs:
           if not tags:
               raise SystemExit("No HexRaysSA/ida-sdk tags were discovered")
 
-          # Filter: only latest tag from 9.3.x and 9.2.x
+          # Filter: only latest tag from 9.3.x
           keep_tags = []
-          for prefix in ("v9.3", "v9.2"):
+          for prefix in ("v9.3"):
               matching = [t for t in tags if t.startswith(prefix)]
               if matching:
                   keep_tags.append(matching[0])  # newest first from sorted
@@ -116,7 +116,7 @@ jobs:
       - name: Install Qt headers and tools
         uses: jurplel/install-qt-action@v3
         with:
-          version: '6.8.0'
+          version: '6.8.2'
           target: desktop
           arch: ${{ matrix.qt_arch }}
           aqtversion: ''
